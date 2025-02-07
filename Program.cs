@@ -42,6 +42,8 @@ namespace BlazorEFIdentity
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
+            builder.Services.AddScoped<UserManager<ApplicationUser>>();
+
 
             builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 

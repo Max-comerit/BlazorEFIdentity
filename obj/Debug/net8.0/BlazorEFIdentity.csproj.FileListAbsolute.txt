@@ -174,4 +174,5 @@ C:\Repon\OPF_R - Newton\Demo\NewEF\BlazorEFIdentity\obj\Debug\net8.0\refint\Blaz
 C:\Repon\OPF_R - Newton\Demo\NewEF\BlazorEFIdentity\obj\Debug\net8.0\BlazorEFIdentity.pdb
 C:\Repon\OPF_R - Newton\Demo\NewEF\BlazorEFIdentity\obj\Debug\net8.0\BlazorEFIdentity.genruntimeconfig.cache
 C:\Repon\OPF_R - Newton\Demo\NewEF\BlazorEFIdentity\obj\Debug\net8.0\ref\BlazorEFIdentity.dll
+C:\Repon\OPF_R - Newton\Demo\NewEF\BlazorEFIdentity\obj\Debug\net8.0\BlazorEFIdentity.sourcelink.json
 C:\Repon\OPF_R - Newton\Demo\NewEF\BlazorEFIdentity\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

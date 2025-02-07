@@ -33,6 +33,11 @@
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
             </div>
             <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.Handle" class="form-control" autocomplete="handle" aria-required="true" placeholder="Handle" />
+                <label for="handle">Handle</label>
+                <ValidationMessage For="() => Input.Handle" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
                 <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
                 <label for="password">Password</label>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
@@ -68,6 +73,23 @@
     public async Task RegisterUser(EditContext editContext)
     {
         var user = CreateUser();
+
+        if(Input.Handle is not null)
+        {
+            user.Handle = Input.Handle;
+
+            var existingUser = UserManager.Users
+            .Any(u => u.Handle != null && u.Handle == user.Handle);
+
+            if(existingUser)
+            {
+                identityErrors = new[]
+                {
+                    new IdentityError { Description = "Handle is already taken"}
+                };
+                return;
+            }
+        }
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -130,6 +152,10 @@
         [EmailAddress]
         [Display(Name = "Email")]
         public string Email { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Handle")]
+        public string Handle { get; set; } = "";
 
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]

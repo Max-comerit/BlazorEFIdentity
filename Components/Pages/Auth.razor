@@ -1,5 +1,7 @@
 ﻿@page "/auth"
-
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> userManager
+@inject AuthenticationStateProvider authenticationStateProvider
 @using Microsoft.AspNetCore.Authorization
 
 @attribute [Authorize]
@@ -10,4 +12,16 @@
 
 <AuthorizeView>
     Hello @context.User.Identity?.Name!
+    <p>
+        Is handle @user.Handle correct?
+    </p>
 </AuthorizeView>
+
+@code {
+    private ApplicationUser user;
+
+    protected override async Task OnInitializedAsync() {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        user = await userManager.GetUserAsync(authState.User);
+    }
+}
