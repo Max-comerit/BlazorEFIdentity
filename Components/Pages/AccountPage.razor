@@ -1,0 +1,112 @@
+﻿@page "/bankaccount"
+@inject ServiceLocator Services
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Mina Konton</PageTitle>
+
+<h4>Skapa ett nytt konto</h4>
+
+<div class="mb-3">
+    <label for="accountName" class="form-label">Kontonamn</label>
+    <input type="text" id="accountName" class="form-control" @bind="accountName" />
+
+    <label for="initialBalance" class="form-label">Startsaldo</label>
+    <input type="number" id="initialBalance" class="form-control" @bind="initialBalance" />
+
+    <div class="form-check mt-2">
+        <input type="checkbox" id="isActive" class="form-check-input" @bind="isActive" />
+        <label class="form-check-label" for="isActive">Aktivt konto</label>
+    </div>
+
+    <button class="btn btn-dark mt-3" @onclick="CreateAccount">Skapa konto</button>
+</div>
+
+<h4>Dina konton</h4>
+
+@if (accounts is not null && accounts.Any())
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">Kontonamn</th>
+                <th scope="col">Kontonummer</th>
+                <th scope="col">Saldo</th>
+                <th scope="col">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var account in accounts)
+            {
+                <tr>
+                    <td>
+                        <a href="/transactions/@account.Id">@account.AccountName</a>
+                    </td>
+                    <td>@account.AccountNumber</td>
+                    <td>@account.Balance.ToString("C")</td>
+                    <td>
+                        @if (account.IsActive)
+                        {
+                            <span class="text-success">Aktivt</span>
+                        }
+                        else
+                        {
+                            <span class="text-danger">Inaktivt</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>Inga konton hittades.</p>
+}
+
+@code {
+    private List<Account> accounts = new();
+    private ApplicationUser user;
+
+    private string accountName = "";
+    private decimal initialBalance = 0;
+    private bool isActive = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await Services.AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdentity = authState.User.Identity;
+
+        if (userIdentity is not null && userIdentity.IsAuthenticated)
+        {
+            user = await Services.UserManager.GetUserAsync(authState.User);
+            if (user is not null)
+            {
+                accounts = await Services.GetUserAccountsAsync(user.Id);
+            }
+        }
+    }
+
+    private async Task CreateAccount()
+    {
+        if (user is null || string.IsNullOrWhiteSpace(accountName)) return;
+
+        var newAccount = new Account
+            {
+                AccountName = accountName,
+                AccountNumber = new Random().Next(100000, 999999),
+                IsActive = isActive,
+                Balance = initialBalance,
+                UserId = user.Id
+            };
+
+        await Services.AddAccountAsync(user, newAccount);
+
+        accounts = await Services.GetUserAccountsAsync(user.Id);
+
+        // Återställ inputfälten
+        accountName = "";
+        initialBalance = 0;
+        isActive = true;
+    }
+}

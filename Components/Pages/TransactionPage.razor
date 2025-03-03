@@ -1,0 +1,172 @@
+﻿@page "/transactions/{accountId:int}"
+@inject ServiceLocator Services
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Transaktionshistorik</PageTitle>
+
+<h4>Transaktioner för konto @account?.AccountName</h4>
+
+@if (account is not null)
+{
+    <p>Kontonummer: @account.AccountNumber</p>
+    <p>Saldo: @account.Balance.ToString("C")</p>
+
+    <button class="btn btn-dark mb-3" @onclick="OpenTransferModal">Överför pengar</button>
+
+    <h5>Transaktioner</h5>
+    @if (transactions is not null && transactions.Any())
+    {
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Datum</th>
+                    <th scope="col">Belopp</th>
+                    <th scope="col">Till konto</th>
+                    <th scope="col">Valuta</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transaction in transactions)
+                {
+                    <tr>
+                        <td>@transaction.DateTime.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@transaction.Amount.ToString("C")</td>
+                        <td>@transaction.Currency</td>
+                        <td>
+                            @if (transaction.IsReserved)
+                            {
+                                <span class="text-warning">Reserverad</span>
+                            }
+                            else
+                            {
+                                <span class="text-success">Slutförd</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p>Inga transaktioner hittades.</p>
+    }
+}
+else
+{
+    <p>Laddar konto...</p>
+}
+
+@if (showTransferModal)
+{
+    <div class="modal show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Överför pengar</h5>
+                    <button type="button" class="close" @onclick="CloseTransferModal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <label for="receiverAccountNumber">Mottagarkonto</label>
+                    <input type="number" id="receiverAccountNumber" class="form-control" @bind="receiverAccountNumber" />
+
+                    <label for="transferAmount" class="mt-2">Belopp</label>
+                    <input type="number" id="transferAmount" class="form-control" @bind="transferAmount" />
+
+                    <label for="currency" class="mt-2">Valuta</label>
+                    <input type="text" id="currency" class="form-control" @bind="currency" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-dark" @onclick="CloseTransferModal">Stäng</button>
+                    <button type="button" class="btn btn-dark" @onclick="TransferMoney">Överför</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int accountId { get; set; }
+    private Account account;
+    private List<Transaction> transactions = new();
+
+    private bool showTransferModal = false;
+    private int receiverAccountNumber;
+    private decimal transferAmount;
+    private string currency = "SEK";
+
+    protected override async Task OnInitializedAsync()
+    {
+        account = await Services.GetAccountByIdAsync(accountId);
+        if (account is not null)
+        {
+            transactions = await Services.GetTransactionsByAccountIdAsync(accountId);
+        }
+    }
+
+    private void OpenTransferModal()
+    {
+        showTransferModal = true;
+    }
+
+    private void CloseTransferModal()
+    {
+        showTransferModal = false;
+        receiverAccountNumber = 0;
+        transferAmount = 0;
+        currency = "SEK";
+    }
+
+    private async Task TransferMoney()
+    {
+        if (account == null || transferAmount <= 0 || receiverAccountNumber <= 0)
+        {
+            return;
+        }
+
+        var receiverAccount = await Services.GetAccountByNumberAsync(receiverAccountNumber);
+        if (receiverAccount == null)
+        {
+            return;
+        }
+
+        if (account.Balance < transferAmount)
+        {
+            return; 
+        }
+
+        var senderTransaction = new Transaction
+            {
+                AccountId = account.Id,
+                Amount = -transferAmount,
+                Currency = currency,
+                IsReserved = false
+            };
+
+        var receiverTransaction = new Transaction
+            {
+                AccountId = receiverAccount.Id,
+                Amount = transferAmount,
+                Currency = currency,
+                IsReserved = false
+            };
+
+        await Services.AddTransactionAsync(senderTransaction);
+        await Services.AddTransactionAsync(receiverTransaction);
+
+        // Uppdatera saldo för båda kontona
+        account.Balance -= transferAmount;
+        receiverAccount.Balance += transferAmount;
+        await Services.UpdateAccountAsync(account);
+        await Services.UpdateAccountAsync(receiverAccount);
+
+        // Uppdatera transaktionshistorik
+        transactions = await Services.GetTransactionsByAccountIdAsync(accountId);
+
+        CloseTransferModal();
+    }
+}

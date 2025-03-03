@@ -1,0 +1,78 @@
+﻿@page "/admin"
+@inject ServiceLocator Services
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+
+
+<PageTitle>Admin</PageTitle>
+
+<h4>Adminsida</h4>
+@if (users is not null)
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">Användarnamn</th>
+                <th scope="col">Email</th>
+                <th scope="col">Telefonnummer</th>
+                <th scope="col">Roller</th>
+                <th scope="col">Hantera roller</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.UserName</td>
+                    <td>@user.Email</td>
+                    <td>@user.PhoneNumber</td>
+                    <td>
+                        @if (userRoles.ContainsKey(user.Id))
+                        {
+                            @string.Join(", ", userRoles[user.Id])
+                        }
+                        else
+                        {
+                            <em>Inga roller</em>
+                        }
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Hantera roller
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <button class="dropdown-item" @onclick="@(() => ToggleRole(user, "Admin"))">Admin-roll</button>
+                            <button class="dropdown-item" @onclick="@(() => ToggleRole(user, "User"))">User-roll</button>
+                        </div>
+
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    private List<ApplicationUser> users = new List<ApplicationUser>();
+    private Dictionary<string, List<string>> userRoles = new Dictionary<string, List<string>>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await Services.GetAllUsersAsync();
+        foreach (var user in users)
+        {
+            var roles = await Services.GetUserRolesAsync(user);
+            userRoles[user.Id] = roles.ToList();
+        }
+    }
+    private async Task ToggleRole(ApplicationUser user, string role)
+    {
+
+        await Services.ToggleUserRoleAsync(user, role);
+        userRoles[user.Id] = (await Services.GetUserRolesAsync(user)).ToList();
+
+    }
+}   

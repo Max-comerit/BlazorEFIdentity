@@ -1,0 +1,133 @@
+﻿@using BlazorEFIdentity.Data
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using BlazorEFIdentity.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+
+@if (User is not null)
+{
+    <div class="card text-center">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="nav-link @(activeTab == "tab1" ? "active" : "")" style="cursor:pointer" @onclick=@(() => SwitchTab("tab1"))>Start</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(activeTab == "tab2" ? "active" : "")" style="cursor:pointer" @onclick=@(() => SwitchTab("tab2"))>Personlig information</a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+
+            @if (activeTab == "tab1")
+            {
+                <div class="tab-pane fade show active">
+                    <h4>Välkommen, @User.UserName!</h4>
+                    <h5 class="card-title">Här kan du redigera din profil</h5>
+
+                    <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" role="alert" />
+                        <div class="form-floating mb-3">
+                            <InputText @bind-Value="Input.PhoneNumber" class="form-control" placeholder="Please enter your phone number." />
+                            <label for="phone-number" class="form-label">Phone number</label>
+                            <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                            <label for="email">Email</label>
+                            <ValidationMessage For="() => Input.Email" class="text-danger" />
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText @bind-Value="Input.Address" class="form-control" aria-required="true" placeholder="adress" />
+                            <label for="address">Adress</label>
+                            <ValidationMessage For="() => Input.Address" class="text-danger" />
+                        </div>
+                        <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+                    </EditForm>
+                </div>
+            }
+            else if (activeTab == "tab2")
+            {
+                <div class="tab-pane fade show active">
+                    <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" role="alert" />
+                        <div class="form-floating mb-3">
+                            <input type="text" value="@Input.UserName" class="form-control" placeholder="Please choose your username." disabled />
+                            <label for="username" class="form-label">Username</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText @bind-Value="Input.SocialSecurityNumber" class="form-control" aria-required="true" placeholder="socialSecurityNumber" />
+                            <label for="socialSecurityNumber">Social Security Number</label>
+                            <ValidationMessage For="() => Input.SocialSecurityNumber" class="text-danger" />
+                        </div>
+                        <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+                    </EditForm>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public ApplicationUser User { get; set; } = default!;
+
+    private string activeTab = "tab1";
+
+    private void SwitchTab(string tab) => activeTab = tab;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+    private async Task OnValidSubmitAsync()
+    {
+
+
+        await SignInManager.RefreshSignInAsync(User);
+        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [Display(Name = "SSN")]
+        public string SocialSecurityNumber { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Phone number")]
+        public string PhoneNumber { get; set; } = "";
+
+        [Required]
+        [Display(Name = "UserName")]
+        public string UserName { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Adress")]
+        public string Address { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}
